@@ -1,40 +1,27 @@
-pub mod prelude;
-
-use axum::routing::{get, post, IntoMakeService};
-use axum::{Form, Router, Server};
-use hyper::server::conn::AddrIncoming;
-
-use axum::extract::rejection::FormRejection;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use serde::Deserialize;
-use std::net::SocketAddr;
-
 pub mod configuration;
+pub mod prelude;
 pub mod routes;
 pub mod startup;
 
-async fn health_check() {}
+use axum::routing::{get, post, IntoMakeService};
+use axum::{Router, Server};
+use hyper::server::conn::AddrIncoming;
 
-#[derive(Deserialize)]
-struct SubscribeForm {
-    name: String,
-    email: String,
-}
+use std::net::SocketAddr;
+use std::sync::Arc;
 
-async fn subscribe(form: Result<Form<SubscribeForm>, FormRejection>) -> impl IntoResponse {
-    match form {
-        Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::BAD_REQUEST,
-    }
-}
+use routes::{health_check, subscribe};
+use sqlx::PgPool;
 
-pub fn run(port: u16) -> Server<AddrIncoming, IntoMakeService<Router>> {
+pub struct TestThing {}
+
+pub fn run(port: u16, connection: PgPool) -> Server<AddrIncoming, IntoMakeService<Router>> {
+    let connection = Arc::new(connection);
     let app = Router::new()
         .route("/health_check", get(health_check))
-        .route("/subscriptions", post(subscribe));
+        .route("/subscriptions", post(subscribe))
+        .with_state(connection);
 
-    // let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     axum::Server::bind(&addr).serve(app.into_make_service())
 }

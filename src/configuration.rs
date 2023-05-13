@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use config::{Config};
+use config::Config;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -24,11 +24,19 @@ impl DatabaseSettings {
             self.username, self.password, self.host, self.port, self.database_name
         )
     }
+
+    pub fn connection_string_without_db(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}",
+            self.username, self.password, self.host, self.port
+        )
+    }
 }
 
 pub fn get_configuration() -> Result<Settings> {
     let builder = Config::builder()
         .add_source(config::File::with_name("configuration"))
-        .build()?.try_deserialize()?;
+        .build()?
+        .try_deserialize()?;
     Ok(builder)
 }
