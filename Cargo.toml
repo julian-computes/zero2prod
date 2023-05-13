@@ -1,0 +1,32 @@
+[package]
+name = "zero2prod"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "zero2prod"
+
+[dependencies]
+anyhow = "1.0.71"
+axum = "0.6.18"
+hyper = "0.14.26"
+tokio = { version = "1.28.1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+config = "0.13"
+
+[dependencies.sqlx]
+version = "0.6.3"
+features = [
+    "runtime-tokio-rustls",
+    "macros",
+    "postgres",
+    "chrono",
+    "migrate"
+]
+
+[dev-dependencies]
+reqwest = "0.11.17"
