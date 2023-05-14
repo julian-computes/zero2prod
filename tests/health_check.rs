@@ -1,6 +1,6 @@
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
-use zero2prod::configuration::{get_configuration, DatabaseSettings};
+use zero2prod::configuration::{get_configuration, DatabaseSettings, Settings};
 
 #[tokio::test]
 async fn health_check_works() {
@@ -17,6 +17,8 @@ async fn health_check_works() {
     // Assert
     assert!(response.status().is_success());
     assert_eq!(Some(0), response.content_length());
+
+    teardown(test_app.configuration.database).await;
 }
 
 #[tokio::test]
@@ -42,6 +44,8 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .expect("Failed to fetch saved subscription");
     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
     assert_eq!(saved.name, "le guin");
+
+    teardown(test_app.configuration.database).await;
 }
 
 #[tokio::test]
@@ -72,10 +76,13 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
             error_message
         );
     }
+
+    teardown(test_app.configuration.database).await;
 }
 
 pub struct TestApp {
     pub host: String,
+    pub configuration: Settings,
     pub db_pool: PgPool,
 }
 
@@ -90,6 +97,7 @@ pub async fn spawn_app() -> TestApp {
     let _ = tokio::spawn(server);
     TestApp {
         host: format!("http://localhost:{port}"),
+        configuration,
         db_pool: connection_pool,
     }
 }
@@ -114,4 +122,21 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .expect("Failed to migrate the database");
 
     connection_pool
+}
+
+pub async fn teardown(db_settings: DatabaseSettings) {
+    // Create database
+    let mut connection = PgConnection::connect(&db_settings.connection_string_without_db())
+        .await
+        .expect("Failed to get connection pool");
+    connection
+        .execute(
+            format!(
+                r#"DROP DATABASE IF EXISTS "{}" WITH (FORCE);"#,
+                db_settings.database_name
+            )
+            .as_str(),
+        )
+        .await
+        .expect("Failed to drop database");
 }

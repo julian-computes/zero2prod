@@ -13,8 +13,6 @@ use std::sync::Arc;
 use routes::{health_check, subscribe};
 use sqlx::PgPool;
 
-pub struct TestThing {}
-
 pub fn run(port: u16, connection: PgPool) -> Server<AddrIncoming, IntoMakeService<Router>> {
     let connection = Arc::new(connection);
     let app = Router::new()
